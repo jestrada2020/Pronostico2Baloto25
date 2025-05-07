@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronóstico Baloto 2025 - Análisis Multimodelo Avanzado</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.7/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@1.5.1/dist/tfjs-vis.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .validation-chart-container {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .custom-file-input::-webkit-file-upload-button {
+            visibility: hidden;
+        }
+        .custom-file-input::before {
+            content: 'Seleccionar archivo';
+            display: inline-block;
+            background: linear-gradient(to bottom, #f9f9f9, #e3e3e3);
+            border: 1px solid #999;
+            border-radius: 3px;
+            padding: 5px 8px;
+            outline: none;
+            white-space: nowrap;
+            cursor: pointer;
+            text-shadow: 1px 1px #fff;
+            font-weight: 700;
+            font-size: 10pt;
+        }
+        .custom-file-input:hover::before {
+            border-color: black;
+        }
+        .custom-file-input:active::before {
+            background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+        }
+        .num-ball {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+        .ball-a { background-color: #FF5252; color: white; }
+        .ball-b { background-color: #4CAF50; color: white; }
+        .ball-c { background-color: #2196F3; color: white; }
+        .ball-d { background-color: #FFC107; color: black; }
+        .ball-e { background-color: #9C27B0; color: white; }
+        .ball-f { background-color: #FF9800; color: white; }
+        
+        .model-toggle input:checked + .toggle-bg {
+            background-color: #4CAF50;
+        }
+        
+        .result-highlight {
+            animation: highlight 2s ease-in-out;
+        }
+        
+        @keyframes highlight {
+            0% { background-color: rgba(76, 175, 80, 0.2); }
+            50% { background-color: rgba(76, 175, 80, 0.5); }
+            100% { background-color: rgba(76, 175, 80, 0.2); }
+        }
+        
+        .consensus-high {
+            background-color: rgba(76, 175, 80, 0.3);
+        }
+        
+        .consensus-medium {
+            background-color: rgba(255, 193, 7, 0.3);
+        }
+        
+        .model-card {
+            transition: all 0.3s ease;
+        }
+        
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .model-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+        
+        .model-badge-xgb { background-color: #FF5252; color: white; }
+        .model-badge-lgbm { background-color: #4CAF50; color: white; }
+        .model-badge-nn { background-color: #2196F3; color: white; }
+        .model-badge-hybrid { background-color: #9C27B0; color: white; }
+        .model-badge-hybrid-xgb-nn { background-color: #E91E63; color: white; }
+        .model-badge-hybrid-xgb-lgbm { background-color: #673AB7; color: white; }
+        .model-badge-consensus { background-color: #FF9800; color: white; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold text-center text-blue-700 mb-4">Pronóstico Baloto 2025 - Análisis Multimodelo Avanzado</h1>
+        <p class="text-center text-gray-600 mb-6">Análisis y pronóstico de números del Baloto usando modelos avanzados de Machine Learning e híbridos</p>
+    </header>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Carga de Datos</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            <div class="border rounded-lg p-4 bg-gray-50">
+                <h3 class="font-medium mb-2">Archivo Principal</h3>
+                <div class="mb-2">
+                    <input type="file" id="mainFile" accept=".csv" class="custom-file-input w-full p-2 border rounded">
+                </div>
+                <div id="mainFileStatus" class="text-sm text-gray-600">Esperando archivo...</div>
+            </div>
+            
+            <div class="border rounded-lg p-4 bg-gray-50">
+                <h3 class="font-medium mb-2">Archivo Inverso</h3>
+                <div class="mb-2">
+                    <input type="file" id="invFile" accept=".csv" class="custom-file-input w-full p-2 border rounded">
+                </div>
+                <div id="invFileStatus" class="text-sm text-gray-600">Esperando archivo...</div>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <button id="loadDataBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded disabled:bg-gray-400" disabled>
+                Cargar y Procesar Datos
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Modelos Predictivos</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div class="model-card bg-gray-50 border rounded-lg p-4 relative">
+                <div class="absolute top-2 right-2 model-toggle">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleXGBoost" class="sr-only" checked>
+                            <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+                <h3 class="font-bold mb-2 text-red-600">XGBoost</h3>
+                <p class="text-sm text-gray-600 mb-2">Árboles de decisión potenciados por gradiente</p>
+                <div class="text-sm">
+                    <div class="mb-1">
+                        <label for="xgb_iterations" class="block text-xs font-medium text-gray-700">Iteraciones:</label>
+                        <input type="number" id="xgb_iterations" min="50" max="5000" value="212" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div class="mb-1">
+                        <label for="xgb_depth" class="block text-xs font-medium text-gray-700">Profundidad:</label>
+                        <input type="number" id="xgb_depth" min="2" max="15" value="5" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div>
+                        <label for="xgb_rate" class="block text-xs font-medium text-gray-700">Tasa de aprendizaje:</label>
+                        <input type="number" id="xgb_rate" min="0.01" max="1" step="0.01" value="0.1" class="w-full p-1 border rounded text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="model-card bg-gray-50 border rounded-lg p-4 relative">
+                <div class="absolute top-2 right-2 model-toggle">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleLightGBM" class="sr-only" checked>
+                            <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+                <h3 class="font-bold mb-2 text-green-600">LightGBM</h3>
+                <p class="text-sm text-gray-600 mb-2">Modelo de gradiente eficiente basado en histogramas</p>
+                <div class="text-sm">
+                    <div class="mb-1">
+                        <label for="lgbm_iterations" class="block text-xs font-medium text-gray-700">Iteraciones:</label>
+                        <input type="number" id="lgbm_iterations" min="50" max="5000" value="185" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div class="mb-1">
+                        <label for="lgbm_leaves" class="block text-xs font-medium text-gray-700">Num. hojas:</label>
+                        <input type="number" id="lgbm_leaves" min="10" max="255" value="31" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div>
+                        <label for="lgbm_rate" class="block text-xs font-medium text-gray-700">Tasa de aprendizaje:</label>
+                        <input type="number" id="lgbm_rate" min="0.01" max="1" step="0.01" value="0.05" class="w-full p-1 border rounded text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="model-card bg-gray-50 border rounded-lg p-4 relative">
+                <div class="absolute top-2 right-2 model-toggle">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleNeuralNet" class="sr-only" checked>
+                            <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+                <h3 class="font-bold mb-2 text-blue-600">Red Neuronal</h3>
+                <p class="text-sm text-gray-600 mb-2">Modelo de aprendizaje profundo</p>
+                <div class="text-sm">
+                    <div class="mb-1">
+                        <label for="nn_layers" class="block text-xs font-medium text-gray-700">Capas ocultas:</label>
+                        <input type="number" id="nn_layers" min="1" max="5" value="2" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div class="mb-1">
+                        <label for="nn_neurons" class="block text-xs font-medium text-gray-700">Neuronas por capa:</label>
+                        <input type="number" id="nn_neurons" min="8" max="128" value="32" class="w-full p-1 border rounded text-sm">
+                    </div>
+                    <div>
+                        <label for="nn_epochs" class="block text-xs font-medium text-gray-700">Épocas:</label>
+                        <input type="number" id="nn_epochs" min="10" max="500" value="120" class="w-full p-1 border rounded text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="model-card bg-gray-50 border rounded-lg p-4 relative">
+                <div class="absolute top-2 right-2 model-toggle">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleHybrid" class="sr-only" checked>
+                            <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+                <h3 class="font-bold mb-2 text-purple-600">Híbrido LightGBM + NN</h3>
+                <p class="text-sm text-gray-600 mb-2">Combinación LightGBM + Red Neuronal</p>
+                <div class="text-sm">
+                    <div class="mb-1">
+                        <label for="hybrid_weight" class="block text-xs font-medium text-gray-700">Peso LightGBM:</label>
+                        <input type="range" id="hybrid_weight" min="0" max="100" value="60" class="w-full">
+                        <div class="text-center" id="hybrid_weight_value">60% - 40%</div>
+                    </div>
+                    <div>
+                        <label for="hybrid_ensemble" class="block text-xs font-medium text-gray-700">Tipo de ensamble:</label>
+                        <select id="hybrid_ensemble" class="w-full p-1 border rounded text-sm">
+                            <option value="weighted">Promedio ponderado</option>
+                            <option value="stacking">Stacking</option>
+                            <option value="boosting">Boosting secuencial</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NUEVO MODELO: XGBoost + Neural Network -->
+            <div class="model-card bg-gray-50 border rounded-lg p-4 relative">
+                <div class="absolute top-2 right-2 model-toggle">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleXGBoostNN" class="sr-only" checked>
+                            <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+                <h3 class="font-bold mb-2 text-pink-600">Híbrido XGBoost + NN</h3>
+                <p class="text-sm text-gray-600 mb-2">Combinación de XGBoost y Red Neuronal</p>
+                <div class="text-sm">
+                    <div class="mb-1">
+                        <label for="xgbnn_weight" class="block text-xs font-medium text-gray-700">Peso XGBoost:</label>
+                        <input type="range" id="xgbnn_weight" min="0" max="100" value="70" class="w-full">
+                        <div class="text-center" id="xgbnn_weight_value">70% - 30%</div>
+                    </div>
+                    <div>
+                        <label for="xgbnn_ensemble" class="block text-xs font-medium text-gray-700">Tipo de ensamble:</label>
+                        <select id="xgbnn_ensemble" class="w-full p-1 border rounded text-sm">
+                            <option value="weighted">Promedio ponderado</option>
+                            <option value="stacking">Stacking</option>
+                            <option value="boosting">Boosting secuencial</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NUEVO MODELO: XGBoost + LightGBM -->
+            <div class="model-card bg-gray-50 border rounded-lg p-4 relative">
+                <div class="absolute top-2 right-2 model-toggle">
+                    <label class="flex items-center cursor-pointer">
+                        <div class="relative">
+                            <input type="checkbox" id="toggleXGBoostLGBM" class="sr-only" checked>
+                            <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                        </div>
+                    </label>
+                </div>
+                <h3 class="font-bold mb-2 text-purple-700">Híbrido XGBoost + LGBM</h3>
+                <p class="text-sm text-gray-600 mb-2">Combinación de XGBoost y LightGBM</p>
+                <div class="text-sm">
+                    <div class="mb-1">
+                        <label for="xgblgbm_weight" class="block text-xs font-medium text-gray-700">Peso XGBoost:</label>
+                        <input type="range" id="xgblgbm_weight" min="0" max="100" value="55" class="w-full">
+                        <div class="text-center" id="xgblgbm_weight_value">55% - 45%</div>
+                    </div>
+                    <div>
+                        <label for="xgblgbm_ensemble" class="block text-xs font-medium text-gray-700">Tipo de ensamble:</label>
+                        <select id="xgblgbm_ensemble" class="w-full p-1 border rounded text-sm">
+                            <option value="weighted">Promedio ponderado</option>
+                            <option value="blending">Blending</option>
+                            <option value="stacking">Stacking</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+                <label for="forecast_days" class="block text-sm font-medium text-gray-700 mb-1">Días a pronosticar:</label>
+                <input type="number" id="forecast_days" min="1" max="14" value="7" class="w-full p-2 border rounded">
+                <p class="text-xs text-gray-500 mt-1">Seleccione entre 1 y 14 días</p>
+            </div>
+            <div>
+                <label for="trainPercentage" class="block text-sm font-medium text-gray-700 mb-1">% de entrenamiento:</label>
+                <input type="number" id="trainPercentage" min="0.1" max="0.99" step="0.01" value="0.85" class="w-full p-2 border rounded">
+                <p class="text-xs text-gray-500 mt-1">Porcentaje de datos usados para entrenamiento</p>
+            </div>
+            <div class="flex items-end">
+                <button id="runModelsBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded w-full disabled:bg-gray-400" disabled>
+                    Ejecutar Modelos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs mb-4">
+        <div class="flex border-b">
+            <button class="tab-button px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600" data-tab="predictions">
+                Predicciones
+            </button>
+            <button class="tab-button px-4 py-2 font-medium text-gray-500" data-tab="comparison">
+                Comparativa
+            </button>
+            <button class="tab-button px-4 py-2 font-medium text-gray-500" data-tab="validation">
+                Validación
+            </button>
+            <button class="tab-button px-4 py-2 font-medium text-gray-500" data-tab="historic">
+                Histórico
+            </button>
+        </div>
+    </div>
+
+    <div id="predictions" class="tab-content active bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Resultados de Predicción</h2>
+        
+        <div id="loadingResults" class="text-center py-8 hidden">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-700">Procesando resultados con múltiples modelos...</p>
+        </div>
+        
+        <div id="noResultsMessage" class="text-center py-8">
+            <p class="text-gray-700">Cargue los archivos y ejecute los modelos para ver resultados</p>
+        </div>
+        
+        <div id="resultsContent" class="hidden">
+            <div class="mb-6">
+                <h3 class="font-medium mb-3 text-gray-700">Pronóstico consensuado para la próxima fecha</h3>
+                <div class="flex justify-center flex-wrap mb-4">
+                    <div class="num-ball ball-a" id="pred-a">--</div>
+                    <div class="num-ball ball-b" id="pred-b">--</div>
+                    <div class="num-ball ball-c" id="pred-c">--</div>
+                    <div class="num-ball ball-d" id="pred-d">--</div>
+                    <div class="num-ball ball-e" id="pred-e">--</div>
+                    <div class="num-ball ball-f" id="pred-f">--</div>
+                </div>
+                <p class="text-center text-sm text-gray-600" id="pred-date">Fecha: --/--/----</p>
+                <p class="text-center text-sm">
+                    <span class="model-badge model-badge-consensus">Consenso</span>
+                    <span class="font-medium" id="consensus-strength">--</span>
+                </p>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border py-2 px-3 text-left">Fecha</th>
+                            <th class="border py-2 px-3 text-center">A</th>
+                            <th class="border py-2 px-3 text-center">B</th>
+                            <th class="border py-2 px-3 text-center">C</th>
+                            <th class="border py-2 px-3 text-center">D</th>
+                            <th class="border py-2 px-3 text-center">E</th>
+                            <th class="border py-2 px-3 text-center">F</th>
+                            <th class="border py-2 px-3 text-center">Modelo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="predictionTableBody">
+                        <!-- Datos de predicción se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="comparison" class="tab-content bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Comparativa de Modelos</h2>
+        
+        <div id="comparisonContent" class="hidden">
+            <div class="mb-6">
+                <h3 class="font-medium mb-3 text-gray-700">Análisis comparativo de predicciones</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="chart-container">
+                        <canvas id="chartComparisonA"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartComparisonB"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartComparisonC"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartComparisonD"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartComparisonE"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartComparisonF"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <h3 class="font-medium mb-3 text-gray-700">Matriz de consenso</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border py-2 px-3 text-left">Columna</th>
+                                <th class="border py-2 px-3 text-center">XGBoost</th>
+                                <th class="border py-2 px-3 text-center">LightGBM</th>
+                                <th class="border py-2 px-3 text-center">Red Neuronal</th>
+                                <th class="border py-2 px-3 text-center">Híbrido LGBM+NN</th>
+                                <th class="border py-2 px-3 text-center">Híbrido XGB+NN</th>
+                                <th class="border py-2 px-3 text-center">Híbrido XGB+LGBM</th>
+                                <th class="border py-2 px-3 text-center">Consenso</th>
+                                <th class="border py-2 px-3 text-center">Fuerza</th>
+                            </tr>
+                        </thead>
+                        <tbody id="consensusTableBody">
+                            <!-- Datos de consenso se cargarán aquí -->
+                            <tr>
+                                <td class="border py-2 px-3">A</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgb-a">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-lgbm-a">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-nn-a">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-hybrid-a">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgbnn-a">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgblgbm-a">-</td>
+                                <td class="border py-2 px-3 text-center font-bold" id="cons-final-a">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-strength-a">-</td>
+                            </tr>
+                            <tr>
+                                <td class="border py-2 px-3">B</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgb-b">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-lgbm-b">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-nn-b">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-hybrid-b">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgbnn-b">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgblgbm-b">-</td>
+                                <td class="border py-2 px-3 text-center font-bold" id="cons-final-b">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-strength-b">-</td>
+                            </tr>
+                            <tr>
+                                <td class="border py-2 px-3">C</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgb-c">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-lgbm-c">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-nn-c">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-hybrid-c">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgbnn-c">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgblgbm-c">-</td>
+                                <td class="border py-2 px-3 text-center font-bold" id="cons-final-c">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-strength-c">-</td>
+                            </tr>
+                            <tr>
+                                <td class="border py-2 px-3">D</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgb-d">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-lgbm-d">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-nn-d">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-hybrid-d">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgbnn-d">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgblgbm-d">-</td>
+                                <td class="border py-2 px-3 text-center font-bold" id="cons-final-d">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-strength-d">-</td>
+                            </tr>
+                            <tr>
+                                <td class="border py-2 px-3">E</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgb-e">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-lgbm-e">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-nn-e">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-hybrid-e">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgbnn-e">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgblgbm-e">-</td>
+                                <td class="border py-2 px-3 text-center font-bold" id="cons-final-e">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-strength-e">-</td>
+                            </tr>
+                            <tr>
+                                <td class="border py-2 px-3">F</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgb-f">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-lgbm-f">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-nn-f">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-hybrid-f">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgbnn-f">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-xgblgbm-f">-</td>
+                                <td class="border py-2 px-3 text-center font-bold" id="cons-final-f">-</td>
+                                <td class="border py-2 px-3 text-center" id="cons-strength-f">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="noComparisonMessage" class="text-center py-8">
+            <p class="text-gray-700">Ejecute los modelos para ver la comparativa</p>
+        </div>
+    </div>
+
+    <div id="validation" class="tab-content bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Validación de Modelos</h2>
+        
+        <div id="validationContent" class="hidden">
+            <div class="mb-4">
+                <label for="model_select" class="block text-sm font-medium text-gray-700 mb-1">Modelo a evaluar:</label>
+                <select id="model_select" class="w-full md:w-1/3 p-2 border rounded mb-4">
+                    <option value="xgboost">XGBoost</option>
+                    <option value="lightgbm">LightGBM</option>
+                    <option value="neuralnet">Red Neuronal</option>
+                    <option value="hybrid">Híbrido LGBM+NN</option>
+                    <option value="hybrid_xgbnn">Híbrido XGBoost+NN</option>
+                    <option value="hybrid_xgblgbm">Híbrido XGBoost+LGBM</option>
+                </select>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="validation-chart-container">
+                    <h3 class="font-medium mb-2 text-center">Columna A: Predicción vs Real</h3>
+                    <canvas id="chartColumnA"></canvas>
+                </div>
+                <div class="validation-chart-container">
+                    <h3 class="font-medium mb-2 text-center">Columna B: Predicción vs Real</h3>
+                    <canvas id="chartColumnB"></canvas>
+                </div>
+                <div class="validation-chart-container">
+                    <h3 class="font-medium mb-2 text-center">Columna C: Predicción vs Real</h3>
+                    <canvas id="chartColumnC"></canvas>
+                </div>
+                <div class="validation-chart-container">
+                    <h3 class="font-medium mb-2 text-center">Columna D: Predicción vs Real</h3>
+                    <canvas id="chartColumnD"></canvas>
+                </div>
+                <div class="validation-chart-container">
+                    <h3 class="font-medium mb-2 text-center">Columna E: Predicción vs Real</h3>
+                    <canvas id="chartColumnE"></canvas>
+                </div>
+                <div class="validation-chart-container">
+                    <h3 class="font-medium mb-2 text-center">Columna F: Predicción vs Real</h3>
+                    <canvas id="chartColumnF"></canvas>
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <h3 class="font-medium mb-3 text-gray-700">Métricas de Rendimiento</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gray-50 border rounded-lg p-4">
+                        <h4 class="font-medium text-sm mb-1">Error Medio Absoluto</h4>
+                        <div class="grid grid-cols-6 gap-2 text-center">
+                            <div id="mae-a" class="text-red-600 font-bold">-</div>
+                            <div id="mae-b" class="text-green-600 font-bold">-</div>
+                            <div id="mae-c" class="text-blue-600 font-bold">-</div>
+                            <div id="mae-d" class="text-yellow-600 font-bold">-</div>
+                            <div id="mae-e" class="text-purple-600 font-bold">-</div>
+                            <div id="mae-f" class="text-orange-600 font-bold">-</div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border rounded-lg p-4">
+                        <h4 class="font-medium text-sm mb-1">Error Cuadrático Medio</h4>
+                        <div class="grid grid-cols-6 gap-2 text-center">
+                            <div id="mse-a" class="text-red-600 font-bold">-</div>
+                            <div id="mse-b" class="text-green-600 font-bold">-</div>
+                            <div id="mse-c" class="text-blue-600 font-bold">-</div>
+                            <div id="mse-d" class="text-yellow-600 font-bold">-</div>
+                            <div id="mse-e" class="text-purple-600 font-bold">-</div>
+                            <div id="mse-f" class="text-orange-600 font-bold">-</div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border rounded-lg p-4">
+                        <h4 class="font-medium text-sm mb-1">Precisión (%)</h4>
+                        <div class="grid grid-cols-6 gap-2 text-center">
+                            <div id="acc-a" class="text-red-600 font-bold">-</div>
+                            <div id="acc-b" class="text-green-600 font-bold">-</div>
+                            <div id="acc-c" class="text-blue-600 font-bold">-</div>
+                            <div id="acc-d" class="text-yellow-600 font-bold">-</div>
+                            <div id="acc-e" class="text-purple-600 font-bold">-</div>
+                            <div id="acc-f" class="text-orange-600 font-bold">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="noValidationMessage" class="text-center py-8">
+            <p class="text-gray-700">Ejecute los modelos para ver los resultados de validación</p>
+        </div>
+    </div>
+
+    <div id="historic" class="tab-content bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Datos Históricos</h2>
+        
+        <div class="mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="dateStart" class="block text-sm font-medium text-gray-700 mb-1">Fecha inicial:</label>
+                    <input type="date" id="dateStart" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="dateEnd" class="block text-sm font-medium text-gray-700 mb-1">Fecha final:</label>
+                    <input type="date" id="dateEnd" class="w-full p-2 border rounded">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-6 gap-2 mb-4">
+                <div>
+                    <label for="filterA" class="block text-sm font-medium text-gray-700 mb-1">Filtro A:</label>
+                    <input type="number" id="filterA" min="0" max="43" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="filterB" class="block text-sm font-medium text-gray-700 mb-1">Filtro B:</label>
+                    <input type="number" id="filterB" min="0" max="43" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="filterC" class="block text-sm font-medium text-gray-700 mb-1">Filtro C:</label>
+                    <input type="number" id="filterC" min="0" max="43" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="filterD" class="block text-sm font-medium text-gray-700 mb-1">Filtro D:</label>
+                    <input type="number" id="filterD" min="0" max="43" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="filterE" class="block text-sm font-medium text-gray-700 mb-1">Filtro E:</label>
+                    <input type="number" id="filterE" min="0" max="43" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label for="filterF" class="block text-sm font-medium text-gray-700 mb-1">Filtro F:</label>
+                    <input type="number" id="filterF" min="0" max="16" class="w-full p-2 border rounded">
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <button id="applyFiltersBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded disabled:bg-gray-400" disabled>
+                    Aplicar Filtros
+                </button>
+            </div>
+        </div>
+        
+        <div id="historicContent" class="hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border py-2 px-3 text-left">Fecha</th>
+                            <th class="border py-2 px-3 text-center">A</th>
+                            <th class="border py-2 px-3 text-center">B</th>
+                            <th class="border py-2 px-3 text-center">C</th>
+                            <th class="border py-2 px-3 text-center">D</th>
+                            <th class="border py-2 px-3 text-center">E</th>
+                            <th class="border py-2 px-3 text-center">F</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicTableBody">
+                        <!-- Datos históricos se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="noHistoricMessage" class="text-center py-8">
+            <p class="text-gray-700">Cargue los archivos para ver datos históricos</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-blue-600">Acerca de la Aplicación</h2>
+        <p class="mb-2">Esta aplicación utiliza múltiples algoritmos de aprendizaje automático para realizar pronósticos de números del Baloto basados en datos históricos.</p>
+        <p class="mb-2">Los modelos implementados incluyen XGBoost, LightGBM, redes neuronales y modelos híbridos avanzados que combinan las fortalezas de distintos algoritmos:</p>
+        <ul class="list-disc pl-5 mb-4">
+            <li><span class="font-semibold">Híbrido LightGBM + Red Neuronal:</span> Combina la eficiencia de LightGBM con la capacidad de aprendizaje profundo</li>
+            <li><span class="font-semibold">Híbrido XGBoost + Red Neuronal:</span> Une la robustez de XGBoost con las capacidades de abstracción de las redes neuronales</li>
+            <li><span class="font-semibold">Híbrido XGBoost + LightGBM:</span> Fusiona dos potentes algoritmos de gradient boosting con enfoques complementarios</li>
+        </ul>
+        <p>Para obtener mejores resultados, se recomienda proporcionar datos históricos completos y ajustar los parámetros de cada modelo según sea necesario.</p>
+    </div>
+
+    <script>
+        // Variables globales
+        let mainData = null;
+        let invData = null;
+        let xgboostResults = null;
+        let lightgbmResults = null;
+        let neuralNetResults = null;
+        let hybridResults = null;
+        let xgbnnResults = null;       // Nuevo modelo híbrido XGBoost + Neural Network
+        let xgblgbmResults = null;     // Nuevo modelo híbrido XGBoost + LightGBM
+        let consensusResults = null;
+        let validationData = {
+            xgboost: null,
+            lightgbm: null,
+            neuralnet: null,
+            hybrid: null,
+            hybrid_xgbnn: null,       // Validación para XGBoost + Neural Network
+            hybrid_xgblgbm: null      // Validación para XGBoost + LightGBM
+        };
+        let charts = {};
+        
+        // Función de inicio
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar componentes
+            initTabSystem();
+            setupFileInputs();
+            setupDateInputs();
+            setupEventListeners();
+            setupToggleSwitches();
+            
+            // Simulación para demostración
+            setupDemoMode();
+        });
+        
+        // Inicializar sistema de pestañas
+        function initTabSystem() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+                    
+                    // Activar botón seleccionado
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                        btn.classList.add('text-gray-500');
+                    });
+                    button.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+                    button.classList.remove('text-gray-500');
+                    
+                    // Mostrar contenido de pestaña
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        }
+        
+        // Configurar los switches de toggle para cada modelo
+        function setupToggleSwitches() {
+            const toggles = document.querySelectorAll('.model-toggle input');
+            
+            toggles.forEach(toggle => {
+                toggle.addEventListener('change', function() {
+                    const toggleBg = this.nextElementSibling;
+                    const dot = toggleBg.nextElementSibling;
+                    
+                    if (this.checked) {
+                        toggleBg.classList.add('bg-green-500');
+                        toggleBg.classList.remove('bg-gray-300');
+                        dot.classList.remove('left-1');
+                        dot.classList.add('left-5');
+                    } else {
+                        toggleBg.classList.remove('bg-green-500');
+                        toggleBg.classList.add('bg-gray-300');
+                        dot.classList.add('left-1');
+                        dot.classList.remove('left-5');
+                    }
+                });
+            });
+            
+            // Slider de peso para modelo híbrido original
+            const hybridSlider = document.getElementById('hybrid_weight');
+            const hybridValue = document.getElementById('hybrid_weight_value');
+            
+            hybridSlider.addEventListener('input', function() {
+                hybridValue.textContent = `${this.value}% - ${100 - this.value}%`;
+            });
+            
+            // Slider de peso para modelo híbrido XGBoost + Neural Network
+            const xgbnnSlider = document.getElementById('xgbnn_weight');
+            const xgbnnValue = document.getElementById('xgbnn_weight_value');
+            
+            xgbnnSlider.addEventListener('input', function() {
+                xgbnnValue.textContent = `${this.value}% - ${100 - this.value}%`;
+            });
+            
+            // Slider de peso para modelo híbrido XGBoost + LightGBM
+            const xgblgbmSlider = document.getElementById('xgblgbm_weight');
+            const xgblgbmValue = document.getElementById('xgblgbm_weight_value');
+            
+            xgblgbmSlider.addEventListener('input', function() {
+                xgblgbmValue.textContent = `${this.value}% - ${100 - this.value}%`;
+            });
+        }
+        
+        // Configurar entradas de archivos
+        function setupFileInputs() {
+            const mainFileInput = document.getElementById('mainFile');
+            const invFileInput = document.getElementById('invFile');
+            const loadDataBtn = document.getElementById('loadDataBtn');
+            
+            mainFileInput.addEventListener('change', function() {
+                updateFileStatus(this, 'mainFileStatus');
+                checkFilesReady();
+            });
+            
+            invFileInput.addEventListener('change', function() {
+                updateFileStatus(this, 'invFileStatus');
+                checkFilesReady();
+            });
+            
+            function updateFileStatus(input, statusId) {
+                const statusElement = document.getElementById(statusId);
+                if (input.files.length > 0) {
+                    statusElement.textContent = `Archivo seleccionado: ${input.files[0].name}`;
+                    statusElement.className = 'text-sm text-green-600';
+                } else {
+                    statusElement.textContent = 'Esperando archivo...';
+                    statusElement.className = 'text-sm text-gray-600';
+                }
+            }
+            
+            function checkFilesReady() {
+                if (mainFileInput.files.length > 0 && invFileInput.files.length > 0) {
+                    loadDataBtn.disabled = false;
+                } else {
+                    loadDataBtn.disabled = true;
+                }
+            }
+        }
+        
+        // Configurar fechas iniciales
+        function setupDateInputs() {
+            const today = new Date();
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(today.getMonth() - 6);
+            
+            document.getElementById('dateStart').valueAsDate = sixMonthsAgo;
+            document.getElementById('dateEnd').valueAsDate = today;
+        }
+        
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Cargar datos
+            document.getElementById('loadDataBtn').addEventListener('click', loadData);
+            
+            // Ejecutar modelo
+            document.getElementById('runModelsBtn').addEventListener('click', runModels);
+            
+            // Aplicar filtros
+            document.getElementById('applyFiltersBtn').addEventListener('click', applyHistoricFilters);
+            
+            // Cambio de modelo en validación
+            document.getElementById('model_select').addEventListener('change', updateValidationCharts);
+        }
+        
+        // Cargar datos desde archivos CSV
+        function loadData() {
+            const mainFileInput = document.getElementById('mainFile');
+            const invFileInput = document.getElementById('invFile');
+            
+            if (mainFileInput.files.length === 0 || invFileInput.files.length === 0) {
+                alert('Por favor seleccione ambos archivos CSV');
+                return;
+            }
+            
+            // Mostrar estado de carga
+            document.getElementById('mainFileStatus').textContent = 'Procesando...';
+            document.getElementById('invFileStatus').textContent = 'Procesando...';
+            document.getElementById('loadDataBtn').disabled = true;
+            
+            // Parsear archivo principal
+            Papa.parse(mainFileInput.files[0], {
+                header: true,
+                dynamicTyping: true,
+                complete: function(results) {
+                    mainData = results.data;
+                    document.getElementById('mainFileStatus').textContent = 'Archivo cargado correctamente';
+                    document.getElementById('mainFileStatus').className = 'text-sm text-green-600';
+                    checkDataLoaded();
+                },
+                error: function(error) {
+                    console.error('Error al cargar el archivo principal:', error);
+                    document.getElementById('mainFileStatus').textContent = 'Error al cargar el archivo';
+                    document.getElementById('mainFileStatus').className = 'text-sm text-red-600';
+                    document.getElementById('loadDataBtn').disabled = false;
+                }
+            });
+            
+            // Parsear archivo inverso
+            Papa.parse(invFileInput.files[0], {
+                header: true,
+                dynamicTyping: true,
+                complete: function(results) {
+                    invData = results.data;
+                    document.getElementById('invFileStatus').textContent = 'Archivo cargado correctamente';
+                    document.getElementById('invFileStatus').className = 'text-sm text-green-600';
+                    checkDataLoaded();
+                },
+                error: function(error) {
+                    console.error('Error al cargar el archivo inverso:', error);
+                    document.getElementById('invFileStatus').textContent = 'Error al cargar el archivo';
+                    document.getElementById('invFileStatus').className = 'text-sm text-red-600';
+                    document.getElementById('loadDataBtn').disabled = false;
+                }
+            });
+            
+            function checkDataLoaded() {
+                if (mainData && invData) {
+                    document.getElementById('runModelsBtn').disabled = false;
+                    document.getElementById('applyFiltersBtn').disabled = false;
+                    populateHistoricTable();
+                }
+            }
+        }
+        
+        // Ejecutar todos los modelos seleccionados
+        function runModels() {
+            if (!mainData || !invData) {
+                alert('Por favor cargue los datos primero');
+                return;
+            }
+            
+            // Verificar qué modelos están activados
+            const useXGBoost = document.getElementById('toggleXGBoost').checked;
+            const useLightGBM = document.getElementById('toggleLightGBM').checked;
+            const useNeuralNet = document.getElementById('toggleNeuralNet').checked;
+            const useHybrid = document.getElementById('toggleHybrid').checked;
+            const useXGBoostNN = document.getElementById('toggleXGBoostNN').checked;
+            const useXGBoostLGBM = document.getElementById('toggleXGBoostLGBM').checked;
+            
+            if (!useXGBoost && !useLightGBM && !useNeuralNet && !useHybrid && !useXGBoostNN && !useXGBoostLGBM) {
+                alert('Por favor active al menos un modelo');
+                return;
+            }
+            
+            // Obtener parámetros generales
+            const forecastDays = parseInt(document.getElementById('forecast_days').value);
+            const trainPercentage = parseFloat(document.getElementById('trainPercentage').value);
+            
+            // Mostrar pantalla de carga
+            document.getElementById('loadingResults').classList.remove('hidden');
+            document.getElementById('noResultsMessage').classList.add('hidden');
+            document.getElementById('resultsContent').classList.add('hidden');
+            document.getElementById('runModelsBtn').disabled = true;
+            
+            // Ocultar mensajes en otras pestañas
+            document.getElementById('noValidationMessage').classList.add('hidden');
+            document.getElementById('noComparisonMessage').classList.add('hidden');
+            
+            // Simular procesamiento del modelo (en una aplicación real, esto invocaría a los modelos reales)
+            setTimeout(() => {
+                // Ejecutar cada modelo seleccionado
+                if (useXGBoost) {
+                    const xgbIterations = parseInt(document.getElementById('xgb_iterations').value);
+                    const xgbDepth = parseInt(document.getElementById('xgb_depth').value);
+                    const xgbRate = parseFloat(document.getElementById('xgb_rate').value);
+                    runXGBoostModel(xgbIterations, xgbDepth, xgbRate, forecastDays);
+                }
+                
+                if (useLightGBM) {
+                    const lgbmIterations = parseInt(document.getElementById('lgbm_iterations').value);
+                    const lgbmLeaves = parseInt(document.getElementById('lgbm_leaves').value);
+                    const lgbmRate = parseFloat(document.getElementById('lgbm_rate').value);
+                    runLightGBMModel(lgbmIterations, lgbmLeaves, lgbmRate, forecastDays);
+                }
+                
+                if (useNeuralNet) {
+                    const nnLayers = parseInt(document.getElementById('nn_layers').value);
+                    const nnNeurons = parseInt(document.getElementById('nn_neurons').value);
+                    const nnEpochs = parseInt(document.getElementById('nn_epochs').value);
+                    runNeuralNetModel(nnLayers, nnNeurons, nnEpochs, forecastDays);
+                }
+                
+                if (useHybrid) {
+                    const hybridWeight = parseInt(document.getElementById('hybrid_weight').value);
+                    const hybridEnsemble = document.getElementById('hybrid_ensemble').value;
+                    runHybridModel(hybridWeight, hybridEnsemble, forecastDays);
+                }
+                
+                // Ejecutar nuevos modelos híbridos
+                if (useXGBoostNN) {
+                    const xgbnnWeight = parseInt(document.getElementById('xgbnn_weight').value);
+                    const xgbnnEnsemble = document.getElementById('xgbnn_ensemble').value;
+                    runXGBoostNNModel(xgbnnWeight, xgbnnEnsemble, forecastDays);
+                }
+                
+                if (useXGBoostLGBM) {
+                    const xgblgbmWeight = parseInt(document.getElementById('xgblgbm_weight').value);
+                    const xgblgbmEnsemble = document.getElementById('xgblgbm_ensemble').value;
+                    runXGBoostLGBMModel(xgblgbmWeight, xgblgbmEnsemble, forecastDays);
+                }
+                
+                // Generar consenso de modelos
+                generateConsensus();
+                
+                // Actualizar UI
+                document.getElementById('loadingResults').classList.add('hidden');
+                document.getElementById('resultsContent').classList.remove('hidden');
+                document.getElementById('runModelsBtn').disabled = false;
+                
+                // Actualizar validación y comparación
+                document.getElementById('validationContent').classList.remove('hidden');
+                document.getElementById('comparisonContent').classList.remove('hidden');
+                
+                // Generar gráficas
+                updateValidationCharts();
+                generateComparisonCharts();
+                
+                // Mostrar métricas
+                displayMetrics();
+            }, 3000);
+        }
+        
+        // Simulación del modelo XGBoost
+        function runXGBoostModel(iterations, depth, rate, forecastDays) {
+            const today = new Date();
+            const nextDates = [];
+            
+            // Generar fechas futuras
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i * 3); // Cada 3 días
+                nextDates.push(date);
+            }
+            
+            // Generar predicciones de XGBoost
+            xgboostResults = nextDates.map(date => {
+                return {
+                    fecha: formatDate(date),
+                    a: Math.floor(Math.random() * 43) + 1,
+                    b: Math.floor(Math.random() * 43) + 1,
+                    c: Math.floor(Math.random() * 43) + 1,
+                    d: Math.floor(Math.random() * 43) + 1,
+                    e: Math.floor(Math.random() * 43) + 1,
+                    f: Math.floor(Math.random() * 16) + 1,
+                    model: 'XGBoost'
+                };
+            });
+            
+            // Generar datos de validación
+            validationData.xgboost = generateValidationData();
+        }
+        
+        // Simulación del modelo LightGBM
+        function runLightGBMModel(iterations, leaves, rate, forecastDays) {
+            const today = new Date();
+            const nextDates = [];
+            
+            // Generar fechas futuras
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i * 3); // Cada 3 días
+                nextDates.push(date);
+            }
+            
+            // Generar predicciones de LightGBM (ligeramente diferentes de XGBoost)
+            lightgbmResults = nextDates.map(date => {
+                return {
+                    fecha: formatDate(date),
+                    a: Math.floor(Math.random() * 43) + 1,
+                    b: Math.floor(Math.random() * 43) + 1,
+                    c: Math.floor(Math.random() * 43) + 1,
+                    d: Math.floor(Math.random() * 43) + 1,
+                    e: Math.floor(Math.random() * 43) + 1,
+                    f: Math.floor(Math.random() * 16) + 1,
+                    model: 'LightGBM'
+                };
+            });
+            
+            // Generar datos de validación
+            validationData.lightgbm = generateValidationData();
+        }
+        
+        // Simulación del modelo de Red Neuronal
+        function runNeuralNetModel(layers, neurons, epochs, forecastDays) {
+            const today = new Date();
+            const nextDates = [];
+            
+            // Generar fechas futuras
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i * 3); // Cada 3 días
+                nextDates.push(date);
+            }
+            
+            // Generar predicciones de Red Neuronal
+            neuralNetResults = nextDates.map(date => {
+                return {
+                    fecha: formatDate(date),
+                    a: Math.floor(Math.random() * 43) + 1,
+                    b: Math.floor(Math.random() * 43) + 1,
+                    c: Math.floor(Math.random() * 43) + 1,
+                    d: Math.floor(Math.random() * 43) + 1,
+                    e: Math.floor(Math.random() * 43) + 1,
+                    f: Math.floor(Math.random() * 16) + 1,
+                    model: 'Red Neuronal'
+                };
+            });
+            
+            // Generar datos de validación
+            validationData.neuralnet = generateValidationData();
+        }
+        
+        // Simulación del modelo Híbrido original (LightGBM + NN)
+        function runHybridModel(weight, ensemble, forecastDays) {
+            const today = new Date();
+            const nextDates = [];
+            
+            // Generar fechas futuras
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i * 3); // Cada 3 días
+                nextDates.push(date);
+            }
+            
+            // Generar predicciones de modelo Híbrido
+            hybridResults = nextDates.map(date => {
+                return {
+                    fecha: formatDate(date),
+                    a: Math.floor(Math.random() * 43) + 1,
+                    b: Math.floor(Math.random() * 43) + 1,
+                    c: Math.floor(Math.random() * 43) + 1,
+                    d: Math.floor(Math.random() * 43) + 1,
+                    e: Math.floor(Math.random() * 43) + 1,
+                    f: Math.floor(Math.random() * 16) + 1,
+                    model: 'Híbrido LGBM+NN'
+                };
+            });
+            
+            // Generar datos de validación
+            validationData.hybrid = generateValidationData();
+        }
+        
+        // NUEVO: Simulación del modelo Híbrido XGBoost + Neural Network
+        function runXGBoostNNModel(weight, ensemble, forecastDays) {
+            const today = new Date();
+            const nextDates = [];
+            
+            // Generar fechas futuras
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i * 3); // Cada 3 días
+                nextDates.push(date);
+            }
+            
+            // Generar predicciones de modelo Híbrido XGBoost + Neural Network
+            xgbnnResults = nextDates.map(date => {
+                return {
+                    fecha: formatDate(date),
+                    a: Math.floor(Math.random() * 43) + 1,
+                    b: Math.floor(Math.random() * 43) + 1,
+                    c: Math.floor(Math.random() * 43) + 1,
+                    d: Math.floor(Math.random() * 43) + 1,
+                    e: Math.floor(Math.random() * 43) + 1,
+                    f: Math.floor(Math.random() * 16) + 1,
+                    model: 'Híbrido XGB+NN'
+                };
+            });
+            
+            // Generar datos de validación
+            validationData.hybrid_xgbnn = generateValidationData();
+        }
+        
+        // NUEVO: Simulación del modelo Híbrido XGBoost + LightGBM
+        function runXGBoostLGBMModel(weight, ensemble, forecastDays) {
+            const today = new Date();
+            const nextDates = [];
+            
+            // Generar fechas futuras
+            for (let i = 1; i <= forecastDays; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i * 3); // Cada 3 días
+                nextDates.push(date);
+            }
+            
+            // Generar predicciones de modelo Híbrido XGBoost + LightGBM
+            xgblgbmResults = nextDates.map(date => {
+                return {
+                    fecha: formatDate(date),
+                    a: Math.floor(Math.random() * 43) + 1,
+                    b: Math.floor(Math.random() * 43) + 1,
+                    c: Math.floor(Math.random() * 43) + 1,
+                    d: Math.floor(Math.random() * 43) + 1,
+                    e: Math.floor(Math.random() * 43) + 1,
+                    f: Math.floor(Math.random() * 16) + 1,
+                    model: 'Híbrido XGB+LGBM'
+                };
+            });
+            
+            // Generar datos de validación
+            validationData.hybrid_xgblgbm = generateValidationData();
+        }
+        
+        // Generar consenso entre modelos
+        function generateConsensus() {
+            // Array para almacenar todos los resultados
+            const allResults = [];
+            
+            // Añadir resultados de todos los modelos activos
+            if (xgboostResults) allResults.push(...xgboostResults);
+            if (lightgbmResults) allResults.push(...lightgbmResults);
+            if (neuralNetResults) allResults.push(...neuralNetResults);
+            if (hybridResults) allResults.push(...hybridResults);
+            if (xgbnnResults) allResults.push(...xgbnnResults);         // Añadir resultados del nuevo modelo híbrido XGBoost + NN
+            if (xgblgbmResults) allResults.push(...xgblgbmResults);     // Añadir resultados del nuevo modelo híbrido XGBoost + LightGBM
+            
+            // Agrupar por fecha
+            const resultsByDate = {};
+            allResults.forEach(result => {
+                if (!resultsByDate[result.fecha]) {
+                    resultsByDate[result.fecha] = [];
+                }
+                resultsByDate[result.fecha].push(result);
+            });
+            
+            // Generar consenso para cada fecha
+            consensusResults = [];
+            
+            Object.keys(resultsByDate).forEach(date => {
+                const resultsForDate = resultsByDate[date];
+                
+                // Para cada columna, contar frecuencias
+                const frequencies = {
+                    a: {}, b: {}, c: {}, d: {}, e: {}, f: {}
+                };
+                
+                resultsForDate.forEach(result => {
+                    for (const col of ['a', 'b', 'c', 'd', 'e', 'f']) {
+                        if (!frequencies[col][result[col]]) {
+                            frequencies[col][result[col]] = 1;
+                        } else {
+                            frequencies[col][result[col]]++;
+                        }
+                    }
+                });
+                
+                // Encontrar valor más frecuente para cada columna
+                const consensusValues = {};
+                const strengthValues = {};
+                
+                for (const col of ['a', 'b', 'c', 'd', 'e', 'f']) {
+                    let maxFreq = 0;
+                    let consensusVal = null;
+                    
+                    Object.keys(frequencies[col]).forEach(val => {
+                        if (frequencies[col][val] > maxFreq) {
+                            maxFreq = frequencies[col][val];
+                            consensusVal = parseInt(val);
+                        }
+                    });
+                    
+                    consensusValues[col] = consensusVal;
+                    strengthValues[col] = maxFreq / resultsForDate.length; // proporción de modelos que coinciden
+                }
+                
+                // Añadir resultado de consenso
+                consensusResults.push({
+                    fecha: date,
+                    a: consensusValues.a,
+                    b: consensusValues.b,
+                    c: consensusValues.c,
+                    d: consensusValues.d,
+                    e: consensusValues.e,
+                    f: consensusValues.f,
+                    model: 'Consenso',
+                    strength: strengthValues
+                });
+            });
+            
+            // Actualizar tabla de predicciones
+            updatePredictionTable();
+            
+            // Actualizar matriz de consenso
+            updateConsensusMatrix();
+        }
+        
+        // Actualizar tabla de predicciones
+        function updatePredictionTable() {
+            const tableBody = document.getElementById('predictionTableBody');
+            tableBody.innerHTML = '';
+            
+            // Combinar todos los resultados
+            const allResults = [];
+            
+            if (consensusResults && consensusResults.length > 0) {
+                allResults.push(...consensusResults);
+            }
+            
+            if (xgboostResults && document.getElementById('toggleXGBoost').checked) {
+                allResults.push(...xgboostResults);
+            }
+            
+            if (lightgbmResults && document.getElementById('toggleLightGBM').checked) {
+                allResults.push(...lightgbmResults);
+            }
+            
+            if (neuralNetResults && document.getElementById('toggleNeuralNet').checked) {
+                allResults.push(...neuralNetResults);
+            }
+            
+            if (hybridResults && document.getElementById('toggleHybrid').checked) {
+                allResults.push(...hybridResults);
+            }
+            
+            // Añadir resultados de los nuevos modelos híbridos
+            if (xgbnnResults && document.getElementById('toggleXGBoostNN').checked) {
+                allResults.push(...xgbnnResults);
+            }
+            
+            if (xgblgbmResults && document.getElementById('toggleXGBoostLGBM').checked) {
+                allResults.push(...xgblgbmResults);
+            }
+            
+            // Ordenar por fecha y modelo (consenso primero)
+            allResults.sort((a, b) => {
+                if (a.fecha !== b.fecha) {
+                    return new Date(a.fecha.split('/').reverse().join('-')) - new Date(b.fecha.split('/').reverse().join('-'));
+                }
+                
+                if (a.model === 'Consenso') return -1;
+                if (b.model === 'Consenso') return 1;
+                
+                return a.model.localeCompare(b.model);
+            });
+            
+            // Añadir filas a la tabla
+            allResults.forEach(result => {
+                const row = document.createElement('tr');
+                
+                // Determinar si es una fila de consenso
+                const isConsensus = result.model === 'Consenso';
+                
+                // Aplicar estilo a la fila
+                if (isConsensus) {
+                    row.classList.add('bg-yellow-50');
+                }
+                
+                // Generar celda de modelo con badge
+                let modelCell = `<td class="border py-2 px-3 text-center">`;
+                
+                if (result.model === 'XGBoost') {
+                    modelCell += `<span class="model-badge model-badge-xgb">XGB</span>`;
+                } else if (result.model === 'LightGBM') {
+                    modelCell += `<span class="model-badge model-badge-lgbm">LGBM</span>`;
+                } else if (result.model === 'Red Neuronal') {
+                    modelCell += `<span class="model-badge model-badge-nn">NN</span>`;
+                } else if (result.model === 'Híbrido LGBM+NN') {
+                    modelCell += `<span class="model-badge model-badge-hybrid">H-LN</span>`;
+                } else if (result.model === 'Híbrido XGB+NN') {
+                    modelCell += `<span class="model-badge model-badge-hybrid-xgb-nn">H-XN</span>`;
+                } else if (result.model === 'Híbrido XGB+LGBM') {
+                    modelCell += `<span class="model-badge model-badge-hybrid-xgb-lgbm">H-XL</span>`;
+                } else if (result.model === 'Consenso') {
+                    modelCell += `<span class="model-badge model-badge-consensus">CONS</span>`;
+                }
+                
+                modelCell += `</td>`;
+                
+                // Generar HTML de la fila
+                row.innerHTML = `
+                    <td class="border py-2 px-3">${result.fecha}</td>
+                    <td class="border py-2 px-3 text-center ${isConsensus ? 'font-bold' : ''} bg-red-100">${result.a}</td>
+                    <td class="border py-2 px-3 text-center ${isConsensus ? 'font-bold' : ''} bg-green-100">${result.b}</td>
+                    <td class="border py-2 px-3 text-center ${isConsensus ? 'font-bold' : ''} bg-blue-100">${result.c}</td>
+                    <td class="border py-2 px-3 text-center ${isConsensus ? 'font-bold' : ''} bg-yellow-100">${result.d}</td>
+                    <td class="border py-2 px-3 text-center ${isConsensus ? 'font-bold' : ''} bg-purple-100">${result.e}</td>
+                    <td class="border py-2 px-3 text-center ${isConsensus ? 'font-bold' : ''} bg-orange-100">${result.f}</td>
+                    ${modelCell}
+                `;
+                
+                tableBody.appendChild(row);
+            });
+            
+            // Actualizar balotas de próxima predicción (usando el primer resultado de consenso)
+            if (consensusResults && consensusResults.length > 0) {
+                const nextPrediction = consensusResults[0];
+                document.getElementById('pred-a').textContent = nextPrediction.a;
+                document.getElementById('pred-b').textContent = nextPrediction.b;
+                document.getElementById('pred-c').textContent = nextPrediction.c;
+                document.getElementById('pred-d').textContent = nextPrediction.d;
+                document.getElementById('pred-e').textContent = nextPrediction.e;
+                document.getElementById('pred-f').textContent = nextPrediction.f;
+                document.getElementById('pred-date').textContent = `Fecha: ${nextPrediction.fecha}`;
+                
+                // Calcular fuerza promedio del consenso
+                const avgStrength = Object.values(nextPrediction.strength).reduce((sum, val) => sum + val, 0) / 6;
+                const strengthPercent = Math.round(avgStrength * 100);
+                document.getElementById('consensus-strength').textContent = `${strengthPercent}% de acuerdo`;
+            }
+        }
+        
+        // Actualizar matriz de consenso
+        function updateConsensusMatrix() {
+            if (!consensusResults || consensusResults.length === 0) return;
+            
+            const nextPrediction = consensusResults[0];
+            const columns = ['a', 'b', 'c', 'd', 'e', 'f'];
+            
+            // Obtener predicciones de cada modelo para la primera fecha
+            let xgbPred = null, lgbmPred = null, nnPred = null, hybridPred = null;
+            let xgbnnPred = null, xgblgbmPred = null;
+            
+            if (xgboostResults) {
+                xgbPred = xgboostResults.find(r => r.fecha === nextPrediction.fecha);
+            }
+            
+            if (lightgbmResults) {
+                lgbmPred = lightgbmResults.find(r => r.fecha === nextPrediction.fecha);
+            }
+            
+            if (neuralNetResults) {
+                nnPred = neuralNetResults.find(r => r.fecha === nextPrediction.fecha);
+            }
+            
+            if (hybridResults) {
+                hybridPred = hybridResults.find(r => r.fecha === nextPrediction.fecha);
+            }
+            
+            // Añadir los nuevos modelos híbridos
+            if (xgbnnResults) {
+                xgbnnPred = xgbnnResults.find(r => r.fecha === nextPrediction.fecha);
+            }
+            
+            if (xgblgbmResults) {
+                xgblgbmPred = xgblgbmResults.find(r => r.fecha === nextPrediction.fecha);
+            }
+            
+            // Actualizar cada celda de la matriz
+            columns.forEach(col => {
+                // Predicciones individuales
+                if (xgbPred) {
+                    const cell = document.getElementById(`cons-xgb-${col}`);
+                    cell.textContent = xgbPred[col];
+                    if (xgbPred[col] === nextPrediction[col]) {
+                        cell.classList.add('bg-green-100');
+                    } else {
+                        cell.classList.remove('bg-green-100');
+                    }
+                }
+                
+                if (lgbmPred) {
+                    const cell = document.getElementById(`cons-lgbm-${col}`);
+                    cell.textContent = lgbmPred[col];
+                    if (lgbmPred[col] === nextPrediction[col]) {
+                        cell.classList.add('bg-green-100');
+                    } else {
+                        cell.classList.remove('bg-green-100');
+                    }
+                }
+                
+                if (nnPred) {
+                    const cell = document.getElementById(`cons-nn-${col}`);
+                    cell.textContent = nnPred[col];
+                    if (nnPred[col] === nextPrediction[col]) {
+                        cell.classList.add('bg-green-100');
+                    } else {
+                        cell.classList.remove('bg-green-100');
+                    }
+                }
+                
+                if (hybridPred) {
+                    const cell = document.getElementById(`cons-hybrid-${col}`);
+                    cell.textContent = hybridPred[col];
+                    if (hybridPred[col] === nextPrediction[col]) {
+                        cell.classList.add('bg-green-100');
+                    } else {
+                        cell.classList.remove('bg-green-100');
+                    }
+                }
+                
+                // Añadir los nuevos modelos híbridos a la matriz de consenso
+                if (xgbnnPred) {
+                    const cell = document.getElementById(`cons-xgbnn-${col}`);
+                    cell.textContent = xgbnnPred[col];
+                    if (xgbnnPred[col] === nextPrediction[col]) {
+                        cell.classList.add('bg-green-100');
+                    } else {
+                        cell.classList.remove('bg-green-100');
+                    }
+                }
+                
+                if (xgblgbmPred) {
+                    const cell = document.getElementById(`cons-xgblgbm-${col}`);
+                    cell.textContent = xgblgbmPred[col];
+                    if (xgblgbmPred[col] === nextPrediction[col]) {
+                        cell.classList.add('bg-green-100');
+                    } else {
+                        cell.classList.remove('bg-green-100');
+                    }
+                }
+                
+                // Valor de consenso
+                document.getElementById(`cons-final-${col}`).textContent = nextPrediction[col];
+                
+                // Fuerza de consenso
+                const strengthCell = document.getElementById(`cons-strength-${col}`);
+                const strength = nextPrediction.strength[col];
+                const strengthPercent = Math.round(strength * 100);
+                strengthCell.textContent = `${strengthPercent}%`;
+                
+                // Colorear según fuerza
+                if (strength >= 0.75) {
+                    strengthCell.classList.add('bg-green-200');
+                    strengthCell.classList.remove('bg-yellow-200', 'bg-red-200');
+                } else if (strength >= 0.5) {
+                    strengthCell.classList.add('bg-yellow-200');
+                    strengthCell.classList.remove('bg-green-200', 'bg-red-200');
+                } else {
+                    strengthCell.classList.add('bg-red-200');
+                    strengthCell.classList.remove('bg-green-200', 'bg-yellow-200');
+                }
+            });
+        }
+        
+        // Generar datos de validación simulados
+        function generateValidationData() {
+            const data = {
+                dates: [],
+                predictions: {
+                    a: [], b: [], c: [], d: [], e: [], f: []
+                },
+                actual: {
+                    a: [], b: [], c: [], d: [], e: [], f: []
+                }
+            };
+            
+            const today = new Date();
+            
+            // Usar datos reales del histórico para simulación de validación
+            for (let i = 0; i < 10; i++) {
+                // Fecha simulada (pasado)
+                const date = new Date(today);
+                date.setDate(today.getDate() - (10-i) * 7);
+                data.dates.push(formatDate(date));
+                
+                if (i < mainData.length) {
+                    // Valores reales (desde mainData)
+                    data.actual.a.push(mainData[i].Aa || Math.floor(Math.random() * 43) + 1);
+                    data.actual.b.push(mainData[i].Ba || Math.floor(Math.random() * 43) + 1);
+                    data.actual.c.push(mainData[i].Ca || Math.floor(Math.random() * 43) + 1);
+                    data.actual.d.push(mainData[i].Da || Math.floor(Math.random() * 43) + 1);
+                    data.actual.e.push(mainData[i].Ea || Math.floor(Math.random() * 43) + 1);
+                    data.actual.f.push(mainData[i].Fa || Math.floor(Math.random() * 16) + 1);
+                    
+                    // Predicciones simuladas (cerca de los valores reales)
+                    const offsetA = (Math.random() * 6) - 3;
+                    data.predictions.a.push(Math.max(1, Math.min(43, Math.round(data.actual.a[i] + offsetA))));
+                    
+                    const offsetB = (Math.random() * 6) - 3;
+                    data.predictions.b.push(Math.max(1, Math.min(43, Math.round(data.actual.b[i] + offsetB))));
+                    
+                    const offsetC = (Math.random() * 6) - 3;
+                    data.predictions.c.push(Math.max(1, Math.min(43, Math.round(data.actual.c[i] + offsetC))));
+                    
+                    const offsetD = (Math.random() * 6) - 3;
+                    data.predictions.d.push(Math.max(1, Math.min(43, Math.round(data.actual.d[i] + offsetD))));
+                    
+                    const offsetE = (Math.random() * 6) - 3;
+                    data.predictions.e.push(Math.max(1, Math.min(43, Math.round(data.actual.e[i] + offsetE))));
+                    
+                    const offsetF = (Math.random() * 3) - 1.5;
+                    data.predictions.f.push(Math.max(1, Math.min(16, Math.round(data.actual.f[i] + offsetF))));
+                } else {
+                    // Si no hay datos reales, generar todo aleatorio
+                    data.actual.a.push(Math.floor(Math.random() * 43) + 1);
+                    data.actual.b.push(Math.floor(Math.random() * 43) + 1);
+                    data.actual.c.push(Math.floor(Math.random() * 43) + 1);
+                    data.actual.d.push(Math.floor(Math.random() * 43) + 1);
+                    data.actual.e.push(Math.floor(Math.random() * 43) + 1);
+                    data.actual.f.push(Math.floor(Math.random() * 16) + 1);
+                    
+                    data.predictions.a.push(Math.floor(Math.random() * 43) + 1);
+                    data.predictions.b.push(Math.floor(Math.random() * 43) + 1);
+                    data.predictions.c.push(Math.floor(Math.random() * 43) + 1);
+                    data.predictions.d.push(Math.floor(Math.random() * 43) + 1);
+                    data.predictions.e.push(Math.floor(Math.random() * 43) + 1);
+                    data.predictions.f.push(Math.floor(Math.random() * 16) + 1);
+                }
+            }
+            
+            return data;
+        }
+        
+        // Actualizar gráficas de validación
+        function updateValidationCharts() {
+            const modelSelect = document.getElementById('model_select').value;
+            let modelData;
+            
+            switch (modelSelect) {
+                case 'xgboost': 
+                    modelData = validationData.xgboost;
+                    break;
+                case 'lightgbm': 
+                    modelData = validationData.lightgbm;
+                    break;
+                case 'neuralnet': 
+                    modelData = validationData.neuralnet;
+                    break;
+                case 'hybrid': 
+                    modelData = validationData.hybrid;
+                    break;
+                case 'hybrid_xgbnn': 
+                    modelData = validationData.hybrid_xgbnn;
+                    break;
+                case 'hybrid_xgblgbm': 
+                    modelData = validationData.hybrid_xgblgbm;
+                    break;
+                default:
+                    modelData = validationData.xgboost;
+            }
+            
+            if (!modelData) return;
+            
+            const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+            const colors = {
+                prediction: ['rgba(255,82,82,0.7)', 'rgba(76,175,80,0.7)', 'rgba(33,150,243,0.7)', 
+                             'rgba(255,193,7,0.7)', 'rgba(156,39,176,0.7)', 'rgba(255,152,0,0.7)'],
+                actual: ['rgba(255,82,82,0.3)', 'rgba(76,175,80,0.3)', 'rgba(33,150,243,0.3)', 
+                         'rgba(255,193,7,0.3)', 'rgba(156,39,176,0.3)', 'rgba(255,152,0,0.3)']
+            };
+            
+            columns.forEach((column, index) => {
+                const lowerCol = column.toLowerCase();
+                const ctx = document.getElementById(`chartColumn${column}`).getContext('2d');
+                
+                // Destruir gráfica anterior si existe
+                if (charts[`column${column}`]) {
+                    charts[`column${column}`].destroy();
+                }
+                
+                charts[`column${column}`] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: modelData.dates,
+                        datasets: [
+                            {
+                                label: 'Predicción',
+                                data: modelData.predictions[lowerCol],
+                                borderColor: colors.prediction[index],
+                                backgroundColor: 'transparent',
+                                borderWidth: 3,
+                                pointRadius: 5,
+                                pointBackgroundColor: colors.prediction[index]
+                            },
+                            {
+                                label: 'Valor Real',
+                                data: modelData.actual[lowerCol],
+                                borderColor: colors.actual[index],
+                                backgroundColor: colors.actual[index],
+                                borderWidth: 2,
+                                pointRadius: 5,
+                                pointBackgroundColor: colors.actual[index],
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: lowerCol === 'f' ? 17 : 44,
+                                ticks: {
+                                    stepSize: lowerCol === 'f' ? 2 : 5
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Mostrar métricas
+            displayMetrics(modelSelect);
+        }
+        
+        // Generar gráficas de comparación entre modelos
+        function generateComparisonCharts() {
+            if (!consensusResults || consensusResults.length === 0) return;
+            
+            const columns = ['A', 'B', 'C', 'D', 'E', 'F'];
+            const dates = consensusResults.map(r => r.fecha);
+            
+            columns.forEach((column, index) => {
+                const lowerCol = column.toLowerCase();
+                const ctx = document.getElementById(`chartComparison${column}`).getContext('2d');
+                
+                // Destruir gráfica anterior si existe
+                if (charts[`comparison${column}`]) {
+                    charts[`comparison${column}`].destroy();
+                }
+                
+                // Preparar datasets
+                const datasets = [
+                    {
+                        label: 'Consenso',
+                        data: consensusResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(255,152,0,1)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 3,
+                        pointRadius: 5,
+                        pointBackgroundColor: 'rgba(255,152,0,1)',
+                        borderDash: [5, 5]
+                    }
+                ];
+                
+                if (xgboostResults && document.getElementById('toggleXGBoost').checked) {
+                    datasets.push({
+                        label: 'XGBoost',
+                        data: xgboostResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(255,82,82,0.7)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(255,82,82,0.7)'
+                    });
+                }
+                
+                if (lightgbmResults && document.getElementById('toggleLightGBM').checked) {
+                    datasets.push({
+                        label: 'LightGBM',
+                        data: lightgbmResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(76,175,80,0.7)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(76,175,80,0.7)'
+                    });
+                }
+                
+                if (neuralNetResults && document.getElementById('toggleNeuralNet').checked) {
+                    datasets.push({
+                        label: 'Red Neuronal',
+                        data: neuralNetResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(33,150,243,0.7)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(33,150,243,0.7)'
+                    });
+                }
+                
+                if (hybridResults && document.getElementById('toggleHybrid').checked) {
+                    datasets.push({
+                        label: 'Híbrido LGBM+NN',
+                        data: hybridResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(156,39,176,0.7)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(156,39,176,0.7)'
+                    });
+                }
+                
+                // Añadir datasets para los nuevos modelos híbridos
+                if (xgbnnResults && document.getElementById('toggleXGBoostNN').checked) {
+                    datasets.push({
+                        label: 'Híbrido XGB+NN',
+                        data: xgbnnResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(233,30,99,0.7)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(233,30,99,0.7)'
+                    });
+                }
+                
+                if (xgblgbmResults && document.getElementById('toggleXGBoostLGBM').checked) {
+                    datasets.push({
+                        label: 'Híbrido XGB+LGBM',
+                        data: xgblgbmResults.map(r => r[lowerCol]),
+                        borderColor: 'rgba(103,58,183,0.7)',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointBackgroundColor: 'rgba(103,58,183,0.7)'
+                    });
+                }
+                
+                charts[`comparison${column}`] = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: dates, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: lowerCol === 'f' ? 17 : 44,
+                                ticks: {
+                                    stepSize: lowerCol === 'f' ? 2 : 5
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: `Columna ${column}: Comparativa de modelos`
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Mostrar métricas de rendimiento
+        function displayMetrics(modelType = 'xgboost') {
+            let modelData;
+            
+            switch (modelType) {
+                case 'xgboost': 
+                    modelData = validationData.xgboost;
+                    break;
+                case 'lightgbm': 
+                    modelData = validationData.lightgbm;
+                    break;
+                case 'neuralnet': 
+                    modelData = validationData.neuralnet;
+                    break;
+                case 'hybrid': 
+                    modelData = validationData.hybrid;
+                    break;
+                case 'hybrid_xgbnn': 
+                    modelData = validationData.hybrid_xgbnn;
+                    break;
+                case 'hybrid_xgblgbm': 
+                    modelData = validationData.hybrid_xgblgbm;
+                    break;
+                default:
+                    modelData = validationData.xgboost;
+            }
+            
+            if (!modelData) return;
+            
+            const columns = ['a', 'b', 'c', 'd', 'e', 'f'];
+            
+            columns.forEach(column => {
+                // Calcular Error Medio Absoluto (MAE)
+                let sumAbsErrors = 0;
+                let sumSquaredErrors = 0;
+                let correctPredictions = 0;
+                
+                for (let i = 0; i < modelData.predictions[column].length; i++) {
+                    const error = Math.abs(modelData.predictions[column][i] - modelData.actual[column][i]);
+                    sumAbsErrors += error;
+                    sumSquaredErrors += error * error;
+                    
+                    // Contar predicciones correctas (error <= 1)
+                    if (error <= 1) {
+                        correctPredictions++;
+                    }
+                }
+                
+                const mae = sumAbsErrors / modelData.predictions[column].length;
+                const mse = sumSquaredErrors / modelData.predictions[column].length;
+                const accuracy = (correctPredictions / modelData.predictions[column].length) * 100;
+                
+                // Actualizar UI
+                document.getElementById(`mae-${column}`).textContent = mae.toFixed(2);
+                document.getElementById(`mse-${column}`).textContent = mse.toFixed(2);
+                document.getElementById(`acc-${column}`).textContent = accuracy.toFixed(1) + '%';
+            });
+        }
+        
+        // Poblar tabla histórica
+        function populateHistoricTable() {
+            if (!mainData || mainData.length === 0) {
+                return;
+            }
+            
+            const tableBody = document.getElementById('historicTableBody');
+            tableBody.innerHTML = '';
+            
+            // Mostrar últimos 20 registros
+            const displayData = mainData.slice(0, 20);
+            
+            displayData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="border py-2 px-3">${row.FECHA || '-'}</td>
+                    <td class="border py-2 px-3 text-center bg-red-100">${row.Aa || '-'}</td>
+                    <td class="border py-2 px-3 text-center bg-green-100">${row.Ba || '-'}</td>
+                    <td class="border py-2 px-3 text-center bg-blue-100">${row.Ca || '-'}</td>
+                    <td class="border py-2 px-3 text-center bg-yellow-100">${row.Da || '-'}</td>
+                    <td class="border py-2 px-3 text-center bg-purple-100">${row.Ea || '-'}</td>
+                    <td class="border py-2 px-3 text-center bg-orange-100">${row.Fa || '-'}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+            
+            document.getElementById('noHistoricMessage').classList.add('hidden');
+            document.getElementById('historicContent').classList.remove('hidden');
+        }
+        
+        // Aplicar filtros a datos históricos
+        function applyHistoricFilters() {
+            if (!mainData || mainData.length === 0) {
+                return;
+            }
+            
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const filterA = document.getElementById('filterA').value;
+            const filterB = document.getElementById('filterB').value;
+            const filterC = document.getElementById('filterC').value;
+            const filterD = document.getElementById('filterD').value;
+            const filterE = document.getElementById('filterE').value;
+            const filterF = document.getElementById('filterF').value;
+            
+            // Filtrar datos
+            let filteredData = [...mainData];
+            
+            // Filtrar por fecha
+            if (dateStart && dateEnd) {
+                filteredData = filteredData.filter(row => {
+                    if (!row.FECHA) return false;
+                    const rowDate = new Date(row.FECHA.split('/').reverse().join('-'));
+                    return rowDate >= new Date(dateStart) && rowDate <= new Date(dateEnd);
+                });
+            }
+            
+            // Filtrar por números
+            if (filterA) filteredData = filteredData.filter(row => row.Aa == filterA);
+            if (filterB) filteredData = filteredData.filter(row => row.Ba == filterB);
+            if (filterC) filteredData = filteredData.filter(row => row.Ca == filterC);
+            if (filterD) filteredData = filteredData.filter(row => row.Da == filterD);
+            if (filterE) filteredData = filteredData.filter(row => row.Ea == filterE);
+            if (filterF) filteredData = filteredData.filter(row => row.Fa == filterF);
+            
+            // Actualizar tabla
+            const tableBody = document.getElementById('historicTableBody');
+            tableBody.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td colspan="7" class="border py-4 text-center text-gray-500">No se encontraron resultados con los filtros aplicados</td>
+                `;
+                tableBody.appendChild(tr);
+            } else {
+                filteredData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="border py-2 px-3">${row.FECHA || '-'}</td>
+                        <td class="border py-2 px-3 text-center ${filterA && row.Aa == filterA ? 'bg-red-300' : 'bg-red-100'}">${row.Aa || '-'}</td>
+                        <td class="border py-2 px-3 text-center ${filterB && row.Ba == filterB ? 'bg-green-300' : 'bg-green-100'}">${row.Ba || '-'}</td>
+                        <td class="border py-2 px-3 text-center ${filterC && row.Ca == filterC ? 'bg-blue-300' : 'bg-blue-100'}">${row.Ca || '-'}</td>
+                        <td class="border py-2 px-3 text-center ${filterD && row.Da == filterD ? 'bg-yellow-300' : 'bg-yellow-100'}">${row.Da || '-'}</td>
+                        <td class="border py-2 px-3 text-center ${filterE && row.Ea == filterE ? 'bg-purple-300' : 'bg-purple-100'}">${row.Ea || '-'}</td>
+                        <td class="border py-2 px-3 text-center ${filterF && row.Fa == filterF ? 'bg-orange-300' : 'bg-orange-100'}">${row.Fa || '-'}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+        }
+        
+        // Utilidades
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+        
+        // Modo de demostración
+        function setupDemoMode() {
+            // Datos de demostración
+            const demoMainData = [];
+            const demoInvData = [];
+            
+            // Generar datos de demostración
+            const today = new Date();
+            for (let i = 0; i < 50; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i * 7);
+                const formattedDate = formatDate(date);
+                
+                demoMainData.push({
+                    FECHA: formattedDate,
+                    Aa: Math.floor(Math.random() * 43) + 1,
+                    Ba: Math.floor(Math.random() * 43) + 1,
+                    Ca: Math.floor(Math.random() * 43) + 1,
+                    Da: Math.floor(Math.random() * 43) + 1,
+                    Ea: Math.floor(Math.random() * 43) + 1,
+                    Fa: Math.floor(Math.random() * 16) + 1
+                });
+                
+                demoInvData.push({
+                    FECHA: formattedDate,
+                    // Otros campos invertidos para el archivo inverso
+                    S1: Math.floor(Math.random() * 10),
+                    S2: Math.floor(Math.random() * 10),
+                    S3: Math.floor(Math.random() * 10),
+                    S4: Math.floor(Math.random() * 10),
+                    S5: Math.floor(Math.random() * 10),
+                    ST: Math.floor(Math.random() * 10),
+                });
+            }
+            
+            // Botón de demostración
+            const demoButton = document.createElement('button');
+            demoButton.textContent = 'Cargar Datos de Demostración';
+            demoButton.className = 'mt-4 w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded';
+            demoButton.addEventListener('click', function() {
+                // Cargar datos de demostración
+                mainData = demoMainData;
+                invData = demoInvData;
+                
+                // Actualizar UI
+                document.getElementById('mainFileStatus').textContent = 'Datos de demostración cargados';
+                document.getElementById('mainFileStatus').className = 'text-sm text-green-600';
+                
+                document.getElementById('invFileStatus').textContent = 'Datos de demostración cargados';
+                document.getElementById('invFileStatus').className = 'text-sm text-green-600';
+                
+                document.getElementById('runModelsBtn').disabled = false;
+                document.getElementById('applyFiltersBtn').disabled = false;
+                
+                populateHistoricTable();
+            });
+            
+            // Añadir botón a la sección de carga de datos
+            const loadDataSection = document.querySelector('.bg-white.rounded-lg.shadow-md.p-6.mb-8');
+            loadDataSection.appendChild(demoButton);
+            
+            // Añadir mensaje de demostración
+            const demoMessage = document.createElement('p');
+            demoMessage.className = 'text-sm text-center text-yellow-700 mt-2';
+            demoMessage.textContent = 'Para probar rápidamente la aplicación, use el botón de datos de demostración';
+            loadDataSection.appendChild(demoMessage);
+        }
+    </script>
+</body>
+</html>
